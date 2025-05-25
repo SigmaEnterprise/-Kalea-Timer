@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pomodoro PWA + To-Do</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e1e1e">
+  <link rel="manifest" href="/manifest.json" />
+<link rel="icon" href="/favicon.png" type="image/png" />
+<meta name="theme-color" content="#1e1e1e" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pomodoro">
+<link rel="apple-touch-icon" href="/icon.png">
+
+  <style>
+    :root {
+      --bg-light: #f2f2f2;
+      --bg-dark: #1e1e1e;
+      --text-light: #000;
+      --text-dark: #fff;
+      --accent: #28a745;
+      --danger: #dc3545;
+    }
+
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: var(--bg-light);
+      color: var(--text-light);
+      padding: 50px 10px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    #timer {
+      font-size: 5rem;
+      margin: 20px 0;
+    }
+
+    #session {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    button, input {
+      font-size: 1rem;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+    }
+
+    #startStop {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    #reset {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    #taskList, #todoList {
+      margin-top: 20px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: rgba(0, 0, 0, 0.05);
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .due-date {
+      font-size: 0.85rem;
+      color: gray;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: red;
+      font-weight: bold;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pomodoro Timer</h1>
+  <div id="session">Work Session</div>
+  <div id="timer">25:00</div>
+
+  <button id="startStop">Start</button>
+  <button id="reset">Reset</button>
+  <button id="toggleTheme">Dark Mode</button>
+
+  <div id="taskList">
+    <h2>Session Tasks</h2>
+    <input id="newTask" type="text" placeholder="Add a task...">
+    <button onclick="addTask()">Add</button>
+    <ul id="tasks"></ul>
+  </div>
+
+  <div id="todoList">
+    <h2>To-Do List</h2>
+    <input id="todoInput" type="text" placeholder="To-do item">
+    <input id="dueDate" type="date">
+    <button onclick="addTodo()">Add To-Do</button>
+    <ul id="todos"></ul>
+  </div>
+
+  <audio id="alarm" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+
+  <script>
+  
+  if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js');
+  });
+}
+    let isRunning = false;
+    let isWork = true;
+    let timer;
+    let timeLeft = 25 * 60;
+
+    const timerDisplay = document.getElementById('timer');
+    const sessionDisplay = document.getElementById('session');
+    const startStopBtn = document.getElementById('startStop');
+    const resetBtn = document.getElementById('reset');
+    const alarmSound = document.getElementById('alarm');
+    const toggleThemeBtn = document.getElementById('toggleTheme');
+
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+      const seconds = (timeLeft % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${minutes}:${seconds}`;
+      sessionDisplay.textContent = isWork ? "Work Session" : "Break Session";
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        clearInterval(timer);
+        startStopBtn.textContent = "Start";
+      } else {
+        timer = setInterval(() => {
+          timeLeft--;
+          updateDisplay();
+          if (timeLeft <= 0) {
+            alarmSound.play();
+            isWork = !isWork;
+            timeLeft = isWork ? 25 * 60 : 5 * 60;
+            updateDisplay();
+            notify(`${isWork ? 'Work' : 'Break'} session started!`);
+          }
+        }, 1000);
+        startStopBtn.textContent = "Pause";
+      }
+      isRunning = !isRunning;
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      isRunning = false;
+      isWork = true;
+      timeLeft = 25 * 60;
+      startStopBtn.textContent = "Start";
+      updateDisplay();
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+    }
+
+    function notify(msg) {
+      if (Notification.permission === 'granted') {
+        new Notification(msg);
+      }
+    }
+
+    function addTask() {
+      const taskInput = document.getElementById('newTask');
+      const task = taskInput.value.trim();
+      if (task) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${task}</span> <button class="delete-btn" onclick="deleteTask(this)">&times;</button>`;
+        document.getElementById('tasks').appendChild(li);
+        taskInput.value = '';
+        saveTasks();
+      }
+    }
+
+    function deleteTask(btn) {
+      const li = btn.parentElement;
+      li.remove();
+      saveTasks();
+    }
+
+    function addTodo() {
+      const input = document.getElementById('todoInput');
+      const due = document.getElementById('dueDate');
+      const task = input.value.trim();
+      const date = due.value;
+
+      if (task && date) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${task}</span> <div class="due-date">Due: ${date}</div> <button class="delete-btn" onclick="deleteTodo(this)">&times;</button>`;
+        document.getElementById('todos').appendChild(li);
+        input.value = '';
+        due.value = '';
+        saveTodos();
+      }
+    }
+
+    function deleteTodo(btn) {
+      const li = btn.parentElement;
+      li.remove();
+      saveTodos();
+    }
+
+    function saveTasks() {
+      const tasks = [];
+      document.querySelectorAll('#tasks li span').forEach(span => {
+        tasks.push(span.textContent);
+      });
+      localStorage.setItem('pomodoroTasks', JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+      const tasks = JSON.parse(localStorage.getItem('pomodoroTasks') || '[]');
+      const taskList = document.getElementById('tasks');
+      taskList.innerHTML = '';
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${task}</span> <button class="delete-btn" onclick="deleteTask(this)">&times;</button>`;
+        taskList.appendChild(li);
+      });
+    }
+
+    function saveTodos() {
+      const todos = [];
+      document.querySelectorAll('#todos li').forEach(li => {
+        todos.push({
+          text: li.querySelector('span')?.textContent.trim(),
+          due: li.querySelector('.due-date')?.textContent.replace('Due: ', '') || ''
+        });
+      });
+      localStorage.setItem('todoList', JSON.stringify(todos));
+    }
+
+    function loadTodos() {
+      const todos = JSON.parse(localStorage.getItem('todoList') || '[]');
+      const todoList = document.getElementById('todos');
+      todoList.innerHTML = '';
+      todos.forEach(todo => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${todo.text}</span> <div class="due-date">Due: ${todo.due}</div> <button class="delete-btn" onclick="deleteTodo(this)">&times;</button>`;
+        todoList.appendChild(li);
+      });
+    }
+
+    startStopBtn.addEventListener("click", toggleTimer);
+    resetBtn.addEventListener("click", resetTimer);
+    toggleThemeBtn.addEventListener("click", toggleTheme);
+
+    updateDisplay();
+    loadTasks();
+    loadTodos();
+
+    if ('Notification' in window) {
+      Notification.requestPermission();
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+  </
+  </
+</body>
+</html>
