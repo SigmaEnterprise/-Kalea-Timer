@@ -1,184 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Pomodoro PWA + To-Do</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e1e1e">
-  <link rel="manifest" href="/manifest.json" />
-<link rel="icon" href="/favicon.png" type="image/png" />
-<meta name="theme-color" content="#1e1e1e" />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pomodoro">
-<link rel="apple-touch-icon" href="/icon.png">
-
-  <style>
-    :root {
-      --bg-light: #f2f2f2;
-      --bg-dark: #1e1e1e;
-      --text-light: #000;
-      --text-dark: #fff;
-      --accent: #28a745;
-      --danger: #dc3545;
-    }
-
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      background: var(--bg-light);
-      color: var(--text-light);
-      padding: 50px 10px;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    body.dark {
-      background: var(--bg-dark);
-      color: var(--text-dark);
-    }
-
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 10px;
-    }
-
-    #timer {
-      font-size: 5rem;
-      margin: 20px 0;
-    }
-
-    #session {
-      font-size: 1.5rem;
-      margin-bottom: 20px;
-    }
-
-    button, input {
-      font-size: 1rem;
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-    }
-
-    #startStop {
-      background-color: var(--accent);
-      color: white;
-    }
-
-    #reset {
-      background-color: var(--danger);
-      color: white;
-    }
-
-    #taskList, #todoList {
-      margin-top: 20px;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      background: rgba(0, 0, 0, 0.05);
-      margin: 5px 0;
-      padding: 10px;
-      border-radius: 5px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .due-date {
-      font-size: 0.85rem;
-      color: gray;
-    }
-
-    .delete-btn {
-      background: transparent;
-      border: none;
-      color: red;
-      font-weight: bold;
-      font-size: 1.2rem;
-      cursor: pointer;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pomodoro Timer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Pomodoro Timer</h1>
-  <div id="session">Work Session</div>
-  <div id="timer">25:00</div>
+  <header>
+    <h1>Pomodoro Timer</h1>
+  </header>
 
-  <button id="startStop">Start</button>
-  <button id="reset">Reset</button>
-  <button id="toggleTheme">Dark Mode</button>
+  <main>
+    <!-- Mode Selection -->
+    <section id="timer-controls">
+      <label for="modeSelect">Mode:</label>
+      <select id="modeSelect">
+        <option value="pomodoro">Pomodoro</option>
+        <option value="shortBreak">Short Break</option>
+        <option value="longBreak">Long Break</option>
+      </select>
 
-  <div id="taskList">
-    <h2>Session Tasks</h2>
-    <input id="newTask" type="text" placeholder="Add a task...">
-    <button onclick="addTask()">Add</button>
-    <ul id="tasks"></ul>
-  </div>
+      <!-- Duration Inputs -->
+      <div id="duration-inputs">
+        <label>Pomodoro (min):
+          <input type="number" id="pomodoroInput" value="25" min="1">
+        </label>
+        <label>Short Break (min):
+          <input type="number" id="shortBreakInput" value="5" min="1">
+        </label>
+        <label>Long Break (min):
+          <input type="number" id="longBreakInput" value="15" min="1">
+        </label>
+      </div>
+    </section>
 
-  <div id="todoList">
-    <h2>To-Do List</h2>
-    <input id="todoInput" type="text" placeholder="To-do item">
-    <input id="dueDate" type="date">
-    <button onclick="addTodo()">Add To-Do</button>
-    <ul id="todos"></ul>
-  </div>
+    <!-- Timer Display -->
+    <section id="timer-display">
+      <h2 id="session">Pomodoro</h2>
+      <div id="timer">25:00</div>
+      <button id="startStop">Start</button>
+      <button id="reset">Reset</button>
+      <button id="toggleTheme">Dark Mode</button>
+    </section>
 
-  <audio id="alarm" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+    <!-- Task & To-Do Lists -->
+    <section id="task-section">
+      <h2>Task</h2>
+      <input type="text" id="taskInput" placeholder="Enter your task">
+      <ul id="taskList"></ul>
 
+      <h2>To-Do List</h2>
+      <input type="text" id="todoInput" placeholder="Add a to-do item">
+      <button id="addTodo">Add</button>
+      <ul id="todoList"></ul>
+    </section>
+  </main>
+
+  <!-- Audio -->
+  <audio id="alarm" src="alarm.mp3" preload="auto"></audio>
+
+  <!-- JavaScript -->
   <script>
-  
-  if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js');
-  });
-}
+    // Timer logic
     let isRunning = false;
-    let isWork = true;
     let timer;
-    let timeLeft = 25 * 60;
+    let timeLeft = 0;
+    let currentMode = 'pomodoro';
 
     const timerDisplay = document.getElementById('timer');
     const sessionDisplay = document.getElementById('session');
     const startStopBtn = document.getElementById('startStop');
     const resetBtn = document.getElementById('reset');
+    const modeSelect = document.getElementById('modeSelect');
     const alarmSound = document.getElementById('alarm');
-    const toggleThemeBtn = document.getElementById('toggleTheme');
+
+    function getTimeForMode(mode) {
+      const pomodoro = parseInt(document.getElementById('pomodoroInput').value, 10) || 25;
+      const shortBreak = parseInt(document.getElementById('shortBreakInput').value, 10) || 5;
+      const longBreak = parseInt(document.getElementById('longBreakInput').value, 10) || 15;
+      if (mode === 'pomodoro') return pomodoro * 60;
+      if (mode === 'shortBreak') return shortBreak * 60;
+      if (mode === 'longBreak') return longBreak * 60;
+    }
 
     function updateDisplay() {
       const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
       const seconds = (timeLeft % 60).toString().padStart(2, '0');
       timerDisplay.textContent = `${minutes}:${seconds}`;
-      sessionDisplay.textContent = isWork ? "Work Session" : "Break Session";
+      sessionDisplay.textContent = currentMode === 'pomodoro'
+        ? 'Pomodoro'
+        : currentMode === 'shortBreak'
+        ? 'Short Break'
+        : 'Long Break';
     }
 
     function toggleTimer() {
       if (isRunning) {
         clearInterval(timer);
-        startStopBtn.textContent = "Start";
+        startStopBtn.textContent = 'Start';
       } else {
         timer = setInterval(() => {
           timeLeft--;
           updateDisplay();
           if (timeLeft <= 0) {
+            clearInterval(timer);
             alarmSound.play();
-            isWork = !isWork;
-            timeLeft = isWork ? 25 * 60 : 5 * 60;
-            updateDisplay();
-            notify(`${isWork ? 'Work' : 'Break'} session started!`);
+            notify(`${sessionDisplay.textContent} complete!`);
+            isRunning = false;
+            startStopBtn.textContent = 'Start';
           }
         }, 1000);
-        startStopBtn.textContent = "Pause";
+        startStopBtn.textContent = 'Pause';
       }
       isRunning = !isRunning;
     }
@@ -186,122 +120,110 @@
     function resetTimer() {
       clearInterval(timer);
       isRunning = false;
-      isWork = true;
-      timeLeft = 25 * 60;
-      startStopBtn.textContent = "Start";
+      startStopBtn.textContent = 'Start';
+      currentMode = modeSelect.value;
+      timeLeft = getTimeForMode(currentMode);
       updateDisplay();
     }
 
-    function toggleTheme() {
-      document.body.classList.toggle('dark');
-    }
+    modeSelect.addEventListener('change', () => {
+      currentMode = modeSelect.value;
+      resetTimer();
+    });
 
-    function notify(msg) {
+    startStopBtn.addEventListener('click', toggleTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    function notify(message) {
       if (Notification.permission === 'granted') {
-        new Notification(msg);
-      }
-    }
-
-    function addTask() {
-      const taskInput = document.getElementById('newTask');
-      const task = taskInput.value.trim();
-      if (task) {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${task}</span> <button class="delete-btn" onclick="deleteTask(this)">&times;</button>`;
-        document.getElementById('tasks').appendChild(li);
-        taskInput.value = '';
-        saveTasks();
-      }
-    }
-
-    function deleteTask(btn) {
-      const li = btn.parentElement;
-      li.remove();
-      saveTasks();
-    }
-
-    function addTodo() {
-      const input = document.getElementById('todoInput');
-      const due = document.getElementById('dueDate');
-      const task = input.value.trim();
-      const date = due.value;
-
-      if (task && date) {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${task}</span> <div class="due-date">Due: ${date}</div> <button class="delete-btn" onclick="deleteTodo(this)">&times;</button>`;
-        document.getElementById('todos').appendChild(li);
-        input.value = '';
-        due.value = '';
-        saveTodos();
-      }
-    }
-
-    function deleteTodo(btn) {
-      const li = btn.parentElement;
-      li.remove();
-      saveTodos();
-    }
-
-    function saveTasks() {
-      const tasks = [];
-      document.querySelectorAll('#tasks li span').forEach(span => {
-        tasks.push(span.textContent);
-      });
-      localStorage.setItem('pomodoroTasks', JSON.stringify(tasks));
-    }
-
-    function loadTasks() {
-      const tasks = JSON.parse(localStorage.getItem('pomodoroTasks') || '[]');
-      const taskList = document.getElementById('tasks');
-      taskList.innerHTML = '';
-      tasks.forEach(task => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${task}</span> <button class="delete-btn" onclick="deleteTask(this)">&times;</button>`;
-        taskList.appendChild(li);
-      });
-    }
-
-    function saveTodos() {
-      const todos = [];
-      document.querySelectorAll('#todos li').forEach(li => {
-        todos.push({
-          text: li.querySelector('span')?.textContent.trim(),
-          due: li.querySelector('.due-date')?.textContent.replace('Due: ', '') || ''
+        new Notification(message);
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            new Notification(message);
+          }
         });
-      });
-      localStorage.setItem('todoList', JSON.stringify(todos));
+      }
     }
 
-    function loadTodos() {
-      const todos = JSON.parse(localStorage.getItem('todoList') || '[]');
-      const todoList = document.getElementById('todos');
-      todoList.innerHTML = '';
-      todos.forEach(todo => {
+    // Dark Mode Toggle
+    const toggleThemeBtn = document.getElementById('toggleTheme');
+    toggleThemeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark-theme');
+    });
+
+    // Task Management
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
+    taskInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && taskInput.value.trim()) {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${todo.text}</span> <div class="due-date">Due: ${todo.due}</div> <button class="delete-btn" onclick="deleteTodo(this)">&times;</button>`;
+        li.textContent = taskInput.value;
+        li.addEventListener('click', () => li.remove());
+        taskList.appendChild(li);
+        taskInput.value = '';
+      }
+    });
+
+    // To-Do List
+    const todoInput = document.getElementById('todoInput');
+    const todoList = document.getElementById('todoList');
+    const addTodoBtn = document.getElementById('addTodo');
+
+    addTodoBtn.addEventListener('click', () => {
+      if (todoInput.value.trim()) {
+        const li = document.createElement('li');
+        li.textContent = todoInput.value;
+        li.addEventListener('click', () => li.remove());
         todoList.appendChild(li);
-      });
-    }
+        todoInput.value = '';
+      }
+    });
 
-    startStopBtn.addEventListener("click", toggleTimer);
-    resetBtn.addEventListener("click", resetTimer);
-    toggleThemeBtn.addEventListener("click", toggleTheme);
-
-    updateDisplay();
-    loadTasks();
-    loadTodos();
-
-    if ('Notification' in window) {
+    // Init
+    resetTimer();
+    if ('Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission();
     }
 
+    // Optional: register service worker
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js');
-      });
+      navigator.serviceWorker.register('sw.js');
     }
   </script>
-  </
-  </
+
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background-color: #fff;
+      color: #000;
+    }
+    .dark-theme {
+      background-color: #121212;
+      color: #eee;
+    }
+    #timer {
+      font-size: 4rem;
+      margin: 1rem 0;
+    }
+    button {
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+    }
+    input[type="number"], input[type="text"], select {
+      margin: 0.25rem;
+      padding: 0.25rem;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      padding: 0.5rem;
+      border-bottom: 1px solid #ccc;
+      cursor: pointer;
+    }
+  </style>
 </body>
 </html>
