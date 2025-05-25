@@ -14,7 +14,7 @@
 
   <main>
     <!-- Mode Selection -->
-    <section id="timer-controls">
+    <section id="timer-controls" aria-labelledby="modeSelect">
       <label for="modeSelect">Mode:</label>
       <select id="modeSelect">
         <option value="pomodoro">Pomodoro</option>
@@ -37,9 +37,10 @@
     </section>
 
     <!-- Timer Display -->
-    <section id="timer-display">
+    <section id="timer-display" aria-live="polite">
       <h2 id="session">Pomodoro</h2>
       <div id="timer">25:00</div>
+      <div id="session-count">Completed Pomodoros: <span id="sessionCounter">0</span></div>
       <button id="startStop">Start</button>
       <button id="reset">Reset</button>
       <button id="toggleTheme">Dark Mode</button>
@@ -52,8 +53,10 @@
       <ul id="taskList"></ul>
 
       <h2>To-Do List</h2>
-      <input type="text" id="todoInput" placeholder="Add a to-do item">
-      <button id="addTodo">Add</button>
+      <div id="todo-controls">
+        <input type="text" id="todoInput" placeholder="Add a to-do item">
+        <button id="addTodo">Add</button>
+      </div>
       <ul id="todoList"></ul>
     </section>
   </main>
@@ -61,13 +64,10 @@
   <!-- Audio -->
   <audio id="alarm" src="alarm.mp3" preload="auto"></audio>
 
-  <!-- JavaScript -->
   <script>
     // Timer logic
     let isRunning = false;
-    let timer;
-    let timeLeft = 0;
-    let currentMode = 'pomodoro';
+    let timer, timeLeft = 0, currentMode = 'pomodoro', pomodoroCount = 0;
 
     const timerDisplay = document.getElementById('timer');
     const sessionDisplay = document.getElementById('session');
@@ -75,25 +75,26 @@
     const resetBtn = document.getElementById('reset');
     const modeSelect = document.getElementById('modeSelect');
     const alarmSound = document.getElementById('alarm');
+    const sessionCounter = document.getElementById('sessionCounter');
 
     function getTimeForMode(mode) {
-      const pomodoro = parseInt(document.getElementById('pomodoroInput').value, 10) || 25;
-      const shortBreak = parseInt(document.getElementById('shortBreakInput').value, 10) || 5;
-      const longBreak = parseInt(document.getElementById('longBreakInput').value, 10) || 15;
-      if (mode === 'pomodoro') return pomodoro * 60;
-      if (mode === 'shortBreak') return shortBreak * 60;
-      if (mode === 'longBreak') return longBreak * 60;
+      const getVal = id => parseInt(document.getElementById(id).value, 10) || 1;
+      return {
+        pomodoro: getVal('pomodoroInput') * 60,
+        shortBreak: getVal('shortBreakInput') * 60,
+        longBreak: getVal('longBreakInput') * 60
+      }[mode];
     }
 
     function updateDisplay() {
-      const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-      const seconds = (timeLeft % 60).toString().padStart(2, '0');
+      const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+      const seconds = String(timeLeft % 60).padStart(2, '0');
       timerDisplay.textContent = `${minutes}:${seconds}`;
-      sessionDisplay.textContent = currentMode === 'pomodoro'
-        ? 'Pomodoro'
-        : currentMode === 'shortBreak'
-        ? 'Short Break'
-        : 'Long Break';
+      sessionDisplay.textContent = {
+        pomodoro: 'Pomodoro',
+        shortBreak: 'Short Break',
+        longBreak: 'Long Break'
+      }[currentMode];
     }
 
     function toggleTimer() {
@@ -108,6 +109,10 @@
             clearInterval(timer);
             alarmSound.play();
             notify(`${sessionDisplay.textContent} complete!`);
+            if (currentMode === 'pomodoro') {
+              pomodoroCount++;
+              sessionCounter.textContent = pomodoroCount;
+            }
             isRunning = false;
             startStopBtn.textContent = 'Start';
           }
@@ -126,11 +131,7 @@
       updateDisplay();
     }
 
-    modeSelect.addEventListener('change', () => {
-      currentMode = modeSelect.value;
-      resetTimer();
-    });
-
+    modeSelect.addEventListener('change', resetTimer);
     startStopBtn.addEventListener('click', toggleTimer);
     resetBtn.addEventListener('click', resetTimer);
 
@@ -146,47 +147,51 @@
       }
     }
 
-    // Dark Mode Toggle
+    // Theme toggle with localStorage
     const toggleThemeBtn = document.getElementById('toggleTheme');
+    function applyTheme() {
+      const isDark = localStorage.getItem('darkTheme') === 'true';
+      document.body.classList.toggle('dark-theme', isDark);
+      toggleThemeBtn.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    }
     toggleThemeBtn.addEventListener('click', () => {
-      document.body.classList.toggle('dark-theme');
+      const current = localStorage.getItem('darkTheme') === 'true';
+      localStorage.setItem('darkTheme', !current);
+      applyTheme();
     });
 
-    // Task Management
+    // Task & To-Do
     const taskInput = document.getElementById('taskInput');
     const taskList = document.getElementById('taskList');
-    taskInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && taskInput.value.trim()) {
-        const li = document.createElement('li');
-        li.textContent = taskInput.value;
-        li.addEventListener('click', () => li.remove());
-        taskList.appendChild(li);
-        taskInput.value = '';
-      }
+    taskInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') addTask(taskInput, taskList);
     });
 
-    // To-Do List
     const todoInput = document.getElementById('todoInput');
     const todoList = document.getElementById('todoList');
     const addTodoBtn = document.getElementById('addTodo');
-
-    addTodoBtn.addEventListener('click', () => {
-      if (todoInput.value.trim()) {
-        const li = document.createElement('li');
-        li.textContent = todoInput.value;
-        li.addEventListener('click', () => li.remove());
-        todoList.appendChild(li);
-        todoInput.value = '';
-      }
+    addTodoBtn.addEventListener('click', () => addTask(todoInput, todoList));
+    todoInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') addTask(todoInput, todoList);
     });
+
+    function addTask(input, list) {
+      const text = input.value.trim();
+      if (text) {
+        const li = document.createElement('li');
+        li.textContent = text;
+        li.addEventListener('click', () => li.remove());
+        list.appendChild(li);
+        input.value = '';
+      }
+    }
 
     // Init
     resetTimer();
+    applyTheme();
     if ('Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission();
     }
-
-    // Optional: register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
@@ -194,26 +199,37 @@
 
   <style>
     body {
-      font-family: sans-serif;
+      font-family: system-ui, sans-serif;
+      margin: 0;
       padding: 2rem;
       background-color: #fff;
       color: #000;
+      transition: background 0.3s, color 0.3s;
     }
     .dark-theme {
       background-color: #121212;
-      color: #eee;
+      color: #e0e0e0;
+    }
+    header, main {
+      max-width: 600px;
+      margin: auto;
     }
     #timer {
       font-size: 4rem;
       margin: 1rem 0;
     }
+    #session-count {
+      margin-bottom: 1rem;
+    }
     button {
       margin: 0.5rem;
       padding: 0.5rem 1rem;
+      font-size: 1rem;
     }
     input[type="number"], input[type="text"], select {
       margin: 0.25rem;
-      padding: 0.25rem;
+      padding: 0.5rem;
+      font-size: 1rem;
     }
     ul {
       list-style-type: none;
@@ -224,6 +240,16 @@
       border-bottom: 1px solid #ccc;
       cursor: pointer;
     }
+    li:hover {
+      background-color: rgba(0,0,0,0.05);
+    }
   </style>
 </body>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('Service Worker registered', reg))
+      .catch(err => console.error('Service Worker registration failed', err));
+  }
+</script>
 </html>
